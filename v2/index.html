@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART on FHIR 病患資料檢視器</title>
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    <!-- Markdown 解析庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        .user-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            margin: 0 0 20px 0;
+            color: #667eea;
+            font-size: 18px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .patient-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .patient-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .patient-details {
+            flex: 1;
+        }
+        .patient-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+        .patient-meta {
+            color: #666;
+            font-size: 14px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .info-item {
+            background: #f8f9fc;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        .data-section {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            background: #f8f9fc;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .spinner {
+            border: 3px solid #eee;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c53030;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            background: #ddd;
+        }
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .med-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .med-item {
+            padding: 15px;
+            background: #f8f9fc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .med-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .med-details {
+            font-size: 13px;
+            color: #666;
+        }
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* ===== AI 影像報告編碼助手樣式 ===== */
+        .ai-assistant-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: 2px solid #e8ecf4;
+        }
+        .ai-assistant-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .ai-assistant-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ai-assistant-title h2 {
+            margin: 0;
+            color: #667eea;
+            font-size: 18px;
+            border: none;
+            padding: 0;
+        }
+        .ai-assistant-title p {
+            margin: 5px 0 0 0;
+            font-size: 13px;
+            color: #888;
+        }
+        .patient-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0f4ff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #d0d9f0;
+        }
+        .patient-badge-info {
+            text-align: right;
+        }
+        .patient-badge-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+        .patient-badge-id {
+            font-size: 12px;
+            color: #666;
+        }
+        .ai-main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 900px) {
+            .ai-main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .ai-left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .api-config-box {
+            background: #f8f9fc;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .api-config-box h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .api-config-box label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .api-config-box input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: white;
+            margin-bottom: 12px;
+        }
+        .api-config-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        .report-input-box {
+            background: #f8f9fc;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .report-input-box label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .report-input-box textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            line-height: 1.6;
+            resize: vertical;
+            background: white;
+        }
+        .report-input-box textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+        }
+        .btn-analyze {
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-analyze:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        }
+        .btn-analyze:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .ai-right-panel {
+            background: #f8f9fc;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        .ai-output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .ai-output-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        .ai-output-title .bar {
+            width: 4px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+        .status-tag {
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-ready {
+            background: #f0f4f8;
+            color: #666;
+        }
+        .status-processing {
+            background: #fef3c7;
+            color: #b45309;
+        }
+        .status-completed {
+            background: #d1fae5;
+            color: #047857;
+        }
+        .status-error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .ai-output-area {
+            flex: 1;
+            overflow-y: auto;
+            color: #444;
+            line-height: 1.7;
+        }
+        .ai-output-placeholder {
+            text-align: center;
+            padding: 60px 20px;
+            color: #aaa;
+        }
+        .ai-output-placeholder svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* Markdown 渲染樣式 */
+        .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .markdown-body th, .markdown-body td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; }
+        .markdown-body th { background-color: #f8fafc; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e293b; }
+        .markdown-body h1 { font-size: 1.5rem; }
+        .markdown-body h2 { font-size: 1.25rem; }
+        .markdown-body h3 { font-size: 1.1rem; }
+        .markdown-body ul, .markdown-body ol { margin-left: 1.5rem; margin-bottom: 0.5rem; }
+        .markdown-body ul { list-style-type: disc; }
+        .markdown-body ol { list-style-type: decimal; }
+        .markdown-body li { margin-bottom: 0.25rem; }
+        .markdown-body p { margin-bottom: 0.5rem; }
+        .markdown-body code { background-color: #f1f5f9; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-family: monospace; }
+        .markdown-body pre { background-color: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .markdown-body pre code { background-color: transparent; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; margin-left: 0; color: #64748b; }
+        .markdown-body strong { font-weight: 700; }
+        .markdown-body em { font-style: italic; }
+        .cursor-blink { display: inline-block; width: 2px; height: 1em; background: #667eea; animation: blink 0.7s infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 SMART on FHIR 病患資料檢視器</h1>
+            <div class="user-info" id="userInfo">正在載入使用者資訊...</div>
+        </header>
+
+        <div class="card" id="patientCard">
+            <h2>👤 病患資訊</h2>
+            <div id="patientInfo">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>正在載入病患資料...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" data-tab="medications">💊 用藥記錄</button>
+                <button class="tab" data-tab="conditions">🩺 診斷記錄</button>
+                <button class="tab" data-tab="observations">📊 檢驗數據</button>
+                <button class="tab" data-tab="rawPatient">📄 原始病患資料</button>
+            </div>
+
+            <div id="medications" class="tab-content active">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>正在載入用藥記錄...</p>
+                </div>
+            </div>
+
+            <div id="conditions" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>正在載入診斷記錄...</p>
+                </div>
+            </div>
+
+            <div id="observations" class="tab-content">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>正在載入檢驗數據...</p>
+                </div>
+            </div>
+
+            <div id="rawPatient" class="tab-content">
+                <div class="data-section" id="rawPatientData">載入中...</div>
+            </div>
+        </div>
+
+        <!-- ===== AI 影像報告編碼助手區塊 ===== -->
+        <div class="ai-assistant-card">
+            <div class="ai-assistant-header">
+                <div class="ai-assistant-title">
+                    <svg width="24" height="24" fill="none" stroke="#667eea" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <div>
+                        <h2>AI 影像報告編碼助手</h2>
+                        <p id="smart-status">等待 SMART 授權中...</p>
+                    </div>
+                </div>
+                <div class="patient-badge">
+                    <div class="patient-badge-info">
+                        <div class="patient-badge-name" id="ai-patient-name">未登錄病患</div>
+                        <div class="patient-badge-id" id="ai-patient-id">ID: N/A</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-main-grid">
+                <!-- 左側：API 配置與報告輸入 -->
+                <div class="ai-left-panel">
+                    <div class="api-config-box">
+                        <h3>
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            API 配置
+                        </h3>
+                        <label>Authorization Bearer Token:</label>
+                        <input id="api-token" type="password" placeholder="貼入長字串 Token...">
+                        <label>API Endpoint:</label>
+                        <input id="api-url" type="text" value="https://10.20.30.88:24168/ai/imgItem">
+                    </div>
+
+                    <div class="report-input-box">
+                        <label>影像報告 (imgResult)</label>
+                        <textarea id="report-input" rows="15" placeholder="請在此貼入完整報告...">Clinical information: RUL adeniocarcinoma s/p VTS wedge
+resection in 2024-11(pT2aN0),
+CT of the chest without contrast shows:
+# Compared with previous CT on 2025-03-04, 2025-06-05.
+> pulmonary emphysema.
+> S/P VATS LUL wedge resection for lung cancer with post-OP change.
+> A RLL solid nodule, about 17mm in size, Srs203 Img44.
+size larger.
+> no pleural effusion.
+> there is no evidence of significant mediastinal lymphadenompathies.
+> calcification of the coronary arteries.
+> degenerative change of the spine.
+> Mild CBD and IHDs dilatation.
+> Considered hepatic and right renal cysts.
+> no definite focal lesion noted at the bilateral adreal glands.
+IMPRESSION:
+1. S/P VATS RUL operation for lung cancer.
+2. Larger RLL lung nodule, malignancy should be considered.
+3. pulmonary emphysema.
+4. dilated CBD and IHDs.</textarea>
+                        
+                        <button id="btn-analyze" onclick="startStreaming()" class="btn-analyze">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            啟動 AI 小助手
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右側：AI 輸出區 -->
+                <div class="ai-right-panel">
+                    <div class="ai-output-header">
+                        <div class="ai-output-title">
+                            <span class="bar"></span>
+                            AI 輔助編碼建議 (串流模式)
+                        </div>
+                        <span id="status-tag" class="status-tag status-ready">READY</span>
+                    </div>
+                    <div id="output-area" class="ai-output-area markdown-body">
+                        <div class="ai-output-placeholder">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            <p>輸入影像報告後點擊左側按鈕開始分析</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 全域變數 =====
+        let smartClient = null;
+        let currentPatient = null;
+        let fullResponseText = "";
+
+        // ===== Tab 切換功能 =====
+        document.querySelectorAll('.tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+                this.classList.add('active');
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ===== 工具函式 =====
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知';
+            try {
+                var date = new Date(dateStr);
+                return date.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function calculateAge(birthDate) {
+            if (!birthDate) return '未知';
+            var today = new Date();
+            var birth = new Date(birthDate);
+            var age = today.getFullYear() - birth.getFullYear();
+            var monthDiff = today.getMonth() - birth.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            return age + ' 歲';
+        }
+
+        function getPatientName(patient) {
+            if (!patient.name || patient.name.length === 0) return '未知姓名';
+            var name = patient.name[0];
+            if (name.text) return name.text;
+            var parts = [];
+            if (name.family) parts.push(name.family);
+            if (name.given) parts = parts.concat(name.given);
+            return parts.join(' ') || '未知姓名';
+        }
+
+        function getGenderDisplay(gender) {
+            var genderMap = {
+                'male': '男性',
+                'female': '女性',
+                'other': '其他',
+                'unknown': '未知'
+            };
+            return genderMap[gender] || gender || '未知';
+        }
+
+        function getPhone(patient) {
+            if (!patient.telecom) return '無資料';
+            var phone = patient.telecom.find(function(t) { return t.system === 'phone'; });
+            return phone ? phone.value : '無資料';
+        }
+
+        function getAddress(patient) {
+            if (!patient.address || patient.address.length === 0) return '無資料';
+            var addr = patient.address[0];
+            var parts = [];
+            if (addr.line) parts = parts.concat(addr.line);
+            if (addr.city) parts.push(addr.city);
+            if (addr.state) parts.push(addr.state);
+            if (addr.postalCode) parts.push(addr.postalCode);
+            if (addr.country) parts.push(addr.country);
+            return parts.join(', ') || '無資料';
+        }
+
+        // ===== 渲染函式 =====
+        function renderPatient(patient) {
+            currentPatient = patient;
+            var name = getPatientName(patient);
+            var initials = name.charAt(0).toUpperCase();
+            
+            var html = 
+                '<div class="patient-header">' +
+                    '<div class="patient-avatar">' + initials + '</div>' +
+                    '<div class="patient-details">' +
+                        '<div class="patient-name">' + name + '</div>' +
+                        '<div class="patient-meta">ID: ' + (patient.id || '未知') + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="info-grid">' +
+                    '<div class="info-item">' +
+                        '<div class="info-label">出生日期</div>' +
+                        '<div class="info-value">' + formatDate(patient.birthDate) + '</div>' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<div class="info-label">年齡</div>' +
+                        '<div class="info-value">' + calculateAge(patient.birthDate) + '</div>' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<div class="info-label">性別</div>' +
+                        '<div class="info-value">' + getGenderDisplay(patient.gender) + '</div>' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<div class="info-label">聯絡電話</div>' +
+                        '<div class="info-value">' + getPhone(patient) + '</div>' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<div class="info-label">地址</div>' +
+                        '<div class="info-value">' + getAddress(patient) + '</div>' +
+                    '</div>' +
+                '</div>';
+            
+            document.getElementById('patientInfo').innerHTML = html;
+
+            // 同步更新 AI 助手區的病患資訊
+            document.getElementById('ai-patient-name').innerText = name;
+            document.getElementById('ai-patient-id').innerText = 'ID: ' + (patient.id || 'N/A');
+        }
+
+        function renderMedications(data) {
+            var container = document.getElementById('medications');
+            
+            if (!data.entry || data.entry.length === 0) {
+                container.innerHTML = '<div class="no-data">無用藥記錄</div>';
+                return;
+            }
+
+            var html = '<ul class="med-list">';
+            data.entry.forEach(function(entry) {
+                var med = entry.resource;
+                var medName = '未知藥物';
+                
+                if (med.medicationCodeableConcept && med.medicationCodeableConcept.text) {
+                    medName = med.medicationCodeableConcept.text;
+                } else if (med.medicationCodeableConcept && med.medicationCodeableConcept.coding) {
+                    medName = med.medicationCodeableConcept.coding[0].display || med.medicationCodeableConcept.coding[0].code;
+                } else if (med.medicationReference && med.medicationReference.display) {
+                    medName = med.medicationReference.display;
+                }
+
+                var status = med.status || '未知';
+                var dateWritten = med.authoredOn ? formatDate(med.authoredOn) : '未知日期';
+
+                html += 
+                    '<li class="med-item">' +
+                        '<div class="med-name">' + medName + '</div>' +
+                        '<div class="med-details">狀態: ' + status + ' | 開立日期: ' + dateWritten + '</div>' +
+                    '</li>';
+            });
+            html += '</ul>';
+            
+            container.innerHTML = html;
+        }
+
+        function renderConditions(data) {
+            var container = document.getElementById('conditions');
+            
+            if (!data.entry || data.entry.length === 0) {
+                container.innerHTML = '<div class="no-data">無診斷記錄</div>';
+                return;
+            }
+
+            var html = '<ul class="med-list">';
+            data.entry.forEach(function(entry) {
+                var condition = entry.resource;
+                var conditionName = '未知診斷';
+                
+                if (condition.code && condition.code.text) {
+                    conditionName = condition.code.text;
+                } else if (condition.code && condition.code.coding && condition.code.coding[0]) {
+                    conditionName = condition.code.coding[0].display || condition.code.coding[0].code;
+                }
+
+                var status = condition.clinicalStatus;
+                if (status && status.coding && status.coding[0]) {
+                    status = status.coding[0].code;
+                }
+                var onsetDate = condition.onsetDateTime ? formatDate(condition.onsetDateTime) : '未知日期';
+
+                html += 
+                    '<li class="med-item">' +
+                        '<div class="med-name">' + conditionName + '</div>' +
+                        '<div class="med-details">狀態: ' + (status || '未知') + ' | 發病日期: ' + onsetDate + '</div>' +
+                    '</li>';
+            });
+            html += '</ul>';
+            
+            container.innerHTML = html;
+        }
+
+        function renderObservations(data) {
+            var container = document.getElementById('observations');
+            
+            if (!data.entry || data.entry.length === 0) {
+                container.innerHTML = '<div class="no-data">無檢驗數據</div>';
+                return;
+            }
+
+            var html = '<ul class="med-list">';
+            data.entry.slice(0, 20).forEach(function(entry) {
+                var obs = entry.resource;
+                var obsName = '未知檢驗';
+                
+                if (obs.code && obs.code.text) {
+                    obsName = obs.code.text;
+                } else if (obs.code && obs.code.coding && obs.code.coding[0]) {
+                    obsName = obs.code.coding[0].display || obs.code.coding[0].code;
+                }
+
+                var value = '無數值';
+                if (obs.valueQuantity) {
+                    value = obs.valueQuantity.value + ' ' + (obs.valueQuantity.unit || '');
+                } else if (obs.valueString) {
+                    value = obs.valueString;
+                } else if (obs.valueCodeableConcept && obs.valueCodeableConcept.text) {
+                    value = obs.valueCodeableConcept.text;
+                }
+
+                var effectiveDate = obs.effectiveDateTime ? formatDate(obs.effectiveDateTime) : '未知日期';
+
+                html += 
+                    '<li class="med-item">' +
+                        '<div class="med-name">' + obsName + '</div>' +
+                        '<div class="med-details">數值: ' + value + ' | 日期: ' + effectiveDate + '</div>' +
+                    '</li>';
+            });
+            html += '</ul>';
+            
+            if (data.entry.length > 20) {
+                html += '<div class="no-data">僅顯示前 20 筆，共 ' + data.entry.length + ' 筆記錄</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function showError(elementId, error) {
+            document.getElementById(elementId).innerHTML = 
+                '<div class="error">' +
+                    '<strong>錯誤:</strong> ' + error.message +
+                '</div>';
+        }
+
+        // ===== SSE 串流解析器類別 =====
+        class SSEParser {
+            constructor(onMessage) {
+                this.buffer = '';
+                this.onMessage = onMessage;
+            }
+
+            feed(chunk) {
+                this.buffer += chunk;
+                const lines = this.buffer.split('\n');
+                this.buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    this.processLine(line);
+                }
+            }
+
+            processLine(line) {
+                const trimmedLine = line.trim();
+                
+                if (!trimmedLine || trimmedLine.startsWith(':')) {
+                    return;
+                }
+                
+                if (trimmedLine.startsWith('data:')) {
+                    const dataContent = trimmedLine.slice(5).trim();
+                    
+                    if (dataContent === '[DONE]') {
+                        return;
+                    }
+                    
+                    if (dataContent) {
+                        try {
+                            const jsonData = JSON.parse(dataContent);
+                            this.onMessage(jsonData);
+                        } catch (e) {
+                            console.warn("SSE JSON 解析失敗:", e.message, "原始資料:", dataContent);
+                        }
+                    }
+                }
+                else if (trimmedLine.startsWith('event:')) {
+                    console.debug("SSE Event:", trimmedLine.slice(6).trim());
+                }
+            }
+
+            flush() {
+                if (this.buffer.trim()) {
+                    this.processLine(this.buffer);
+                    this.buffer = '';
+                }
+            }
+        }
+
+        // ===== Markdown 渲染 =====
+        function renderMarkdown(text) {
+            if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+                try {
+                    return marked.parse(text);
+                } catch (e) {
+                    console.warn("Markdown 解析錯誤:", e);
+                    return escapeHtml(text).replace(/\n/g, '<br>');
+                }
+            }
+            return escapeHtml(text).replace(/\n/g, '<br>');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===== AI 串流 API =====
+        async function startStreaming() {
+            const report = document.getElementById('report-input').value;
+            const token = document.getElementById('api-token').value;
+            const url = document.getElementById('api-url').value;
+            const outputArea = document.getElementById('output-area');
+            const btn = document.getElementById('btn-analyze');
+            const status = document.getElementById('status-tag');
+
+            if (!report) return alert("請輸入影像報告內容");
+            if (!token) return alert("請貼入 Bearer Token 進行驗證");
+
+            // 初始化 UI
+            fullResponseText = "";
+            outputArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在連線至 AI 服務...</p></div>';
+            btn.disabled = true;
+            status.innerText = "PROCESSING";
+            status.className = "status-tag status-processing";
+
+            // 建立 SSE 解析器
+            const sseParser = new SSEParser((jsonData) => {
+                if (jsonData.answer) {
+                    fullResponseText += jsonData.answer;
+                    outputArea.innerHTML = renderMarkdown(fullResponseText) + '<span class="cursor-blink"></span>';
+                    outputArea.scrollTop = outputArea.scrollHeight;
+                }
+                
+                if (jsonData.event === "workflow_finished" || jsonData.event === "message_end") {
+                    status.innerText = "COMPLETED";
+                    status.className = "status-tag status-completed";
+                }
+            });
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: report,
+                        response_mode: "streaming",
+                        user: "smart-on-fhir-user"
+                    }),
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+
+                if (!response.ok) {
+                    const errBody = await response.text().catch(() => "無法讀取錯誤內容");
+                    throw new Error(`HTTP 錯誤 ${response.status}: ${errBody || response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                outputArea.innerHTML = "";
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        sseParser.flush();
+                        status.innerText = "COMPLETED";
+                        status.className = "status-tag status-completed";
+                        break;
+                    }
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    sseParser.feed(chunk);
+                }
+
+                if (fullResponseText) {
+                    outputArea.innerHTML = renderMarkdown(fullResponseText);
+                }
+
+            } catch (err) {
+                console.error("連線錯誤詳情:", err);
+                status.innerText = "ERROR";
+                status.className = "status-tag status-error";
+                
+                let errorTitle = "連線失敗";
+                let errorDetail = err.message;
+                let diagnosticInfo = "";
+
+                if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+                    errorTitle = "網路連線被拒絕 (Failed to fetch)";
+                    diagnosticInfo = `
+                        <div style="margin-top: 12px;">
+                            <p style="font-weight: bold; color: #c53030;">常見原因與對策：</p>
+                            <ul style="margin-left: 20px; margin-top: 8px; line-height: 1.8;">
+                                <li><strong>自簽憑證信任問題：</strong> 由於 API 使用私有 IP，請先開啟 API 網址並點擊「繼續前往」。</li>
+                                <li><strong>CORS 跨域限制：</strong> 伺服器必須配置 Access-Control-Allow-Origin。</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                outputArea.innerHTML = `
+                    <div class="error">
+                        <p style="font-weight: bold;">${errorTitle}</p>
+                        <p style="font-size: 14px; margin-top: 8px;">${errorDetail}</p>
+                        <div style="font-size: 12px; margin-top: 12px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #fecaca;">
+                            ${diagnosticInfo || "請檢查 API Token 或 Endpoint 網址。"}
+                        </div>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ===== 主程式：SMART on FHIR 授權完成後執行 =====
+        FHIR.oauth2.ready().then(function(client) {
+            smartClient = client;
+            
+            // 顯示伺服器資訊
+            var serverUrl = client.state.serverUrl || '未知';
+            document.getElementById('userInfo').innerHTML = 
+                '已連接至 FHIR 伺服器: ' + serverUrl;
+            
+            // 更新 AI 助手區狀態
+            document.getElementById('smart-status').innerText = 'SMART Session: 已授權';
+
+            // 讀取病患資料
+            client.patient.read().then(
+                function(patient) {
+                    renderPatient(patient);
+                    document.getElementById('rawPatientData').textContent = JSON.stringify(patient, null, 2);
+                },
+                function(error) {
+                    showError('patientInfo', error);
+                    document.getElementById('rawPatientData').textContent = '載入失敗: ' + error.message;
+                }
+            );
+
+            // 讀取用藥記錄 (MedicationRequest)
+            client.request('/MedicationRequest?patient=' + client.patient.id, {
+                resolveReferences: ['medicationReference'],
+                graph: true
+            }).then(
+                function(data) { renderMedications(data); },
+                function(error) { showError('medications', error); }
+            );
+
+            // 讀取診斷記錄 (Condition)
+            client.request('/Condition?patient=' + client.patient.id).then(
+                function(data) { renderConditions(data); },
+                function(error) { showError('conditions', error); }
+            );
+
+            // 讀取檢驗數據 (Observation)
+            client.request('/Observation?patient=' + client.patient.id + '&_count=50').then(
+                function(data) { renderObservations(data); },
+                function(error) { showError('observations', error); }
+            );
+
+        }).catch(function(error) {
+            console.error('SMART 授權失敗:', error);
+            document.body.innerHTML = 
+                '<div style="max-width:600px;margin:50px auto;padding:20px;">' +
+                    '<div class="error">' +
+                        '<h2>⚠️ 授權失敗</h2>' +
+                        '<p>' + error.message + '</p>' +
+                        '<p>請確認是否從 SMART Launcher 正確啟動此應用程式。</p>' +
+                        '<p><a href="https://launch.smarthealthit.org/" target="_blank">前往 SMART Launcher</a></p>' +
+                    '</div>' +
+                '</div>';
+        });
+    </script>
+</body>
+</html>
