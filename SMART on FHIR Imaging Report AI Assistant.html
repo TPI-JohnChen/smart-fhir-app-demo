@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 影像報告編碼小助手 - 試用版</title>
+    <!-- 核心套件引入 -->
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Markdown 解析庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .markdown-body th, .markdown-body td { border: 1px solid #e2e8f0; padding: 0.5rem; text-align: left; }
+        .markdown-body th { background-color: #f8fafc; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e293b; }
+        .markdown-body h1 { font-size: 1.5rem; }
+        .markdown-body h2 { font-size: 1.25rem; }
+        .markdown-body h3 { font-size: 1.1rem; }
+        .markdown-body ul, .markdown-body ol { margin-left: 1.5rem; margin-bottom: 0.5rem; }
+        .markdown-body ul { list-style-type: disc; }
+        .markdown-body ol { list-style-type: decimal; }
+        .markdown-body li { margin-bottom: 0.25rem; }
+        .markdown-body p { margin-bottom: 0.5rem; }
+        .markdown-body code { background-color: #f1f5f9; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-family: monospace; }
+        .markdown-body pre { background-color: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .markdown-body pre code { background-color: transparent; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; margin-left: 0; color: #64748b; }
+        .markdown-body strong { font-weight: 700; }
+        .markdown-body em { font-style: italic; }
+        .cursor-blink { display: inline-block; width: 2px; height: 1em; background: #3b82f6; animation: blink 0.7s infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <div id="app" class="max-w-7xl mx-auto p-4 md:p-6">
+        <!-- 頂部導航與病患資訊 -->
+        <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-blue-600 flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    AI 影像報告編碼助手
+                </h1>
+                <p id="patient-display" class="text-sm text-slate-500 mt-1 uppercase tracking-wider font-medium">等待 SMART 授權中...</p>
+            </div>
+            <div class="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
+                <div class="text-right">
+                    <p id="patient-name" class="text-sm font-bold text-slate-700">未登錄病患</p>
+                    <p id="patient-id" class="text-xs text-slate-500">ID: N/A</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 左側設定與輸入 -->
+            <div class="lg:col-span-5 space-y-6">
+                <!-- API 安全設定 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        API 配置
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-slate-400 block mb-1">Authorization Bearer Token:</label>
+                            <input id="api-token" type="password" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-sm font-mono focus:ring-1 focus:ring-blue-400 outline-none" placeholder="貼入長字串 Token...">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400 block mb-1">API Endpoint:</label>
+                            <input id="api-url" type="text" value="https://10.20.30.88:24168/ai/imgItem" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-sm font-mono focus:ring-1 focus:ring-blue-400 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 報告輸入區 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">影像報告 (imgResult)</label>
+                    <textarea id="report-input" rows="15" class="w-full p-4 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono leading-relaxed" placeholder="請在此貼入完整報告...">Clinical information: RUL adeniocarcinoma s/p VTS wedge
+resection in 2024-11(pT2aN0),
+CT of the chest without contrast shows:
+# Compared with previous CT on 2025-03-04, 2025-06-05.
+> pulmonary emphysema.
+> S/P VATS LUL wedge resection for lung cancer with post-OP change.
+> A RLL solid nodule, about 17mm in size, Srs203 Img44.
+size larger.
+> no pleural effusion.
+> there is no evidence of significant mediastinal lymphadenompathies.
+> calcification of the coronary arteries.
+> degenerative change of the spine.
+> Mild CBD and IHDs dilatation.
+> Considered hepatic and right renal cysts.
+> no definite focal lesion noted at the bilateral adreal glands.
+IMPRESSION:
+1. S/P VATS RUL operation for lung cancer.
+2. Larger RLL lung nodule, malignancy should be considered.
+3. pulmonary emphysema.
+4. dilated CBD and IHDs.</textarea>
+                    
+                    <button id="btn-analyze" onclick="startStreaming()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        啟動 AI 小助手
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右側即時結果區 -->
+            <div class="lg:col-span-7">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-full">
+                    <div class="flex items-center justify-between mb-4 border-b pb-3">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <span class="w-2 h-6 bg-blue-600 rounded-full"></span>
+                            AI 輔助編碼建議 (串流模式)
+                        </h2>
+                        <span id="status-tag" class="text-[10px] px-2 py-1 bg-slate-100 text-slate-500 rounded font-bold uppercase">Ready</span>
+                    </div>
+
+                    <div id="output-area" class="markdown-body text-slate-600 leading-relaxed min-h-[500px]">
+                        <div class="text-center py-20 opacity-30">
+                            <svg class="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            <p class="mt-4">輸入影像報告後點擊左側按鈕開始分析</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let client = null;
+        let fullResponseText = "";
+
+        /**
+         * SMART on FHIR Ready 邏輯
+         */
+        window.onload = function() {
+            if (typeof FHIR === 'undefined') {
+                console.error("FHIR Client library not loaded.");
+                document.getElementById('patient-display').innerText = "錯誤：無法載入 FHIR 庫";
+                return;
+            }
+
+            FHIR.oauth2.ready().then(newClient => {
+                client = newClient;
+                document.getElementById('patient-display').innerText = "SMART Session: 已授權";
+                
+                client.patient.read().then(p => {
+                    const name = p.name ? p.name[0].text || (p.name[0].given.join(' ') + ' ' + p.name[0].family) : 'Unknown Patient';
+                    document.getElementById('patient-name').innerText = name;
+                    document.getElementById('patient-id').innerText = `ID: ${p.id}`;
+                });
+            }).catch(e => {
+                console.warn("SMART Launch check", e);
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('iss')) {
+                    FHIR.oauth2.authorize({
+                        clientId: "ai_assistant_app",
+                        scope: "launch patient/*.read openid fhirUser",
+                        redirectUri: window.location.origin + window.location.pathname
+                    });
+                }
+            });
+        };
+
+        /**
+         * SSE 串流解析器類別
+         * 處理跨 chunk 的不完整行問題
+         */
+        class SSEParser {
+            constructor(onMessage) {
+                this.buffer = '';
+                this.onMessage = onMessage;
+            }
+
+            /**
+             * 接收新的 chunk 並解析完整的 SSE 事件
+             */
+            feed(chunk) {
+                this.buffer += chunk;
+                
+                // 以雙換行分割事件 (SSE 標準：事件以 \n\n 分隔)
+                // 但也要處理單行 data: 的情況
+                const lines = this.buffer.split('\n');
+                
+                // 保留最後一行（可能不完整）
+                this.buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    this.processLine(line);
+                }
+            }
+
+            /**
+             * 處理單行 SSE 資料
+             */
+            processLine(line) {
+                const trimmedLine = line.trim();
+                
+                // 忽略空行和註解
+                if (!trimmedLine || trimmedLine.startsWith(':')) {
+                    return;
+                }
+                
+                // 處理 data: 開頭的行
+                if (trimmedLine.startsWith('data:')) {
+                    // 取得 data: 後面的內容（注意可能有空格）
+                    const dataContent = trimmedLine.slice(5).trim();
+                    
+                    // 忽略 [DONE] 標記
+                    if (dataContent === '[DONE]') {
+                        return;
+                    }
+                    
+                    // 嘗試解析 JSON
+                    if (dataContent) {
+                        try {
+                            const jsonData = JSON.parse(dataContent);
+                            this.onMessage(jsonData);
+                        } catch (e) {
+                            console.warn("SSE JSON 解析失敗:", e.message, "原始資料:", dataContent);
+                        }
+                    }
+                }
+                // 處理 event: 開頭的行（某些 SSE 實作會用到）
+                else if (trimmedLine.startsWith('event:')) {
+                    // 目前只記錄，不特別處理
+                    console.debug("SSE Event:", trimmedLine.slice(6).trim());
+                }
+            }
+
+            /**
+             * 串流結束時，處理 buffer 中剩餘的資料
+             */
+            flush() {
+                if (this.buffer.trim()) {
+                    this.processLine(this.buffer);
+                    this.buffer = '';
+                }
+            }
+        }
+
+        /**
+         * 安全地渲染 Markdown
+         */
+        function renderMarkdown(text) {
+            if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+                try {
+                    return marked.parse(text);
+                } catch (e) {
+                    console.warn("Markdown 解析錯誤:", e);
+                    return escapeHtml(text).replace(/\n/g, '<br>');
+                }
+            }
+            return escapeHtml(text).replace(/\n/g, '<br>');
+        }
+
+        /**
+         * HTML 轉義（fallback 用）
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * 處理串流 API (Streaming SSE) - 修正版
+         */
+        async function startStreaming() {
+            const report = document.getElementById('report-input').value;
+            const token = document.getElementById('api-token').value;
+            const url = document.getElementById('api-url').value;
+            const outputArea = document.getElementById('output-area');
+            const btn = document.getElementById('btn-analyze');
+            const status = document.getElementById('status-tag');
+
+            if (!report) return alert("請輸入影像報告內容");
+            if (!token) return alert("請貼入 Bearer Token 進行驗證");
+
+            // 初始化 UI
+            fullResponseText = "";
+            outputArea.innerHTML = '<div class="animate-pulse flex space-x-4"><div class="flex-1 space-y-4 py-1"><div class="h-4 bg-slate-200 rounded w-3/4"></div><div class="h-4 bg-slate-200 rounded"></div></div></div>';
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            status.innerText = "Processing";
+            status.className = "text-[10px] px-2 py-1 bg-yellow-100 text-yellow-600 rounded font-bold uppercase";
+
+            // 建立 SSE 解析器
+            const sseParser = new SSEParser((jsonData) => {
+                // 處理 answer 欄位
+                if (jsonData.answer) {
+                    fullResponseText += jsonData.answer;
+                    outputArea.innerHTML = renderMarkdown(fullResponseText) + '<span class="cursor-blink"></span>';
+                    
+                    // 自動捲動到底部
+                    outputArea.scrollTop = outputArea.scrollHeight;
+                }
+                
+                // 處理完成事件
+                if (jsonData.event === "workflow_finished" || jsonData.event === "message_end") {
+                    status.innerText = "Completed";
+                    status.className = "text-[10px] px-2 py-1 bg-green-100 text-green-600 rounded font-bold uppercase";
+                }
+            });
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        inputs: {},
+                        query: report,
+                        response_mode: "streaming",
+                        user: "smart-on-fhir-user"
+                    }),
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+
+                if (!response.ok) {
+                    const errBody = await response.text().catch(() => "無法讀取錯誤內容");
+                    throw new Error(`HTTP 錯誤 ${response.status}: ${errBody || response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                outputArea.innerHTML = ""; // 清除 Loading
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        // 處理 buffer 中剩餘的資料
+                        sseParser.flush();
+                        
+                        // 串流正常結束
+                        status.innerText = "Completed";
+                        status.className = "text-[10px] px-2 py-1 bg-green-100 text-green-600 rounded font-bold uppercase";
+                        break;
+                    }
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    sseParser.feed(chunk);
+                }
+
+                // 最終渲染（移除閃爍游標）
+                if (fullResponseText) {
+                    outputArea.innerHTML = renderMarkdown(fullResponseText);
+                }
+
+            } catch (err) {
+                console.error("連線錯誤詳情:", err);
+                status.innerText = "Error";
+                status.className = "text-[10px] px-2 py-1 bg-red-100 text-red-600 rounded font-bold uppercase";
+                
+                let errorTitle = "連線失敗";
+                let errorDetail = err.message;
+                let diagnosticInfo = "";
+
+                if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+                    errorTitle = "網路連線被拒絕 (Failed to fetch)";
+                    diagnosticInfo = `
+                        <div class="mt-4 space-y-2">
+                            <p class="font-bold text-red-800">常見原因與對策：</p>
+                            <ul class="list-disc ml-5 space-y-1">
+                                <li><strong>自簽憑證信任問題：</strong> 由於 API 使用私有 IP，請先開啟 API 網址並點擊「繼續前往」。</li>
+                                <li><strong>CORS 跨域限制：</strong> 伺服器必須配置 Access-Control-Allow-Origin。</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                outputArea.innerHTML = `
+                    <div class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                        <p class="font-bold flex items-center gap-2">${errorTitle}</p>
+                        <p class="text-sm mt-1">${errorDetail}</p>
+                        <div class="text-xs mt-4 p-3 bg-white/60 rounded border border-red-100 leading-relaxed text-slate-600">
+                            ${diagnosticInfo || "請檢查 API Token 或 Endpoint 網址。"}
+                        </div>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+    </script>
+</body>
+</html>
