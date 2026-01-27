@@ -355,6 +355,10 @@
             background: #1a5a8a;
             box-shadow: 0 6px 16px rgba(15, 76, 117, 0.35);
         }
+        #btn-mock:hover {
+            background: #047857;
+            box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+        }
         .btn-analyze:disabled {
             opacity: 0.6;
             cursor: not-allowed;
@@ -566,10 +570,16 @@ IMPRESSION:
 3. pulmonary emphysema.
 4. dilated CBD and IHDs.</textarea>
                         
-                        <button id="btn-analyze" onclick="startStreaming()" class="btn-analyze">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            啟動 AI 小助手
-                        </button>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button id="btn-analyze" onclick="startStreaming()" class="btn-analyze" style="flex: 1; min-width: 200px;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                啟動 AI 小助手
+                            </button>
+                            <button id="btn-mock" onclick="startMockStreaming()" class="btn-analyze" style="flex: 1; min-width: 200px; background: #059669;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                Mock Test AI 小助手
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1020,6 +1030,59 @@ IMPRESSION:
             } finally {
                 btn.disabled = false;
             }
+        }
+
+        // ===== Mock AI 串流 API (模擬回應，不需連線) =====
+        async function startMockStreaming() {
+            const report = document.getElementById('report-input').value;
+            const outputArea = document.getElementById('output-area');
+            const btnAnalyze = document.getElementById('btn-analyze');
+            const btnMock = document.getElementById('btn-mock');
+            const status = document.getElementById('status-tag');
+
+            if (!report) return alert("請輸入影像報告內容");
+
+            // 初始化 UI
+            fullResponseText = "";
+            outputArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Mock 模式：正在模擬 AI 服務回應...</p></div>';
+            btnAnalyze.disabled = true;
+            btnMock.disabled = true;
+            status.innerText = "MOCK";
+            status.className = "status-tag status-processing";
+            status.style.background = "#d1fae5";
+            status.style.color = "#059669";
+
+            // 模擬的 SSE 回應內容（基於實際 API 回傳格式）
+            const mockAnswerChunks = [
+                "|", " ICD", "-", "10", "-", "PCS", " |", " 英", "文", "程序", "名稱", " |", " 中文", "程序", "名稱", " |", " 符", "合", "機", "率", " |", " ", "影", "像", "類", "型", " |", " 解", "剖", "部", "位", " |", " 特", "殊", "檢", "查", "方式", " |", " 符", "合", "原因", "說", "明", " |\n",
+                "|", "------------", "|", "------------", "|", "------------", "|", "----------", "|", "---------", "|", "----------", "|", "------------", "|", "------------", "|\n",
+                "|", " B", "210", "ZZ", "Z", " |", " Computer", "ized", " Tom", "ography", " (", "CT", " Scan", ")", " of", " Chest", " |", " 胸", "部", "電", "腦", "斷", "層", "掃", "描", " |", " ", "100", "%", " |", " CT", " Scan", " |", " Chest", " |", " 無", " |", " ", "影", "像", "類", "型", "與", "解", "剖", "部", "位", "完全", "匹", "配", "，", "報", "告", "為", "胸", "部", "CT", "無", "顯", "影", "劑", "檢", "查", " |\n",
+                "|", " B", "210", "0", "ZZ", " |", " Computer", "ized", " Tom", "ography", " (", "CT", " Scan", ")", " of", " Right", " Lung", " |", " ", "右", "肺", "電", "腦", "斷", "層", "掃", "描", " |", " ", "85", "%", " |", " CT", " Scan", " |", " Right", " Lung", " |", " 無", " |", " ", "影", "像", "類", "型", "完全", "匹", "配", "，", "解", "剖", "部", "位", "高度", "相關", "（", "右", "肺", "），", "無", "特殊", "方式", "，", "胸", "部", "CT", "涵", "蓋", "肺", "部", "病", "灶", " |\n",
+                "|", " B", "210", "1", "ZZ", " |", " Computer", "ized", " Tom", "ography", " (", "CT", " Scan", ")", " of", " Left", " Lung", " |", " 左", "肺", "電", "腦", "斷", "層", "掃", "描", " |", " ", "50", "%", " |", " CT", " Scan", " |", " Left", " Lung", " |", " 無", " |", " ", "影", "像", "類", "型", "匹", "配", "，", "解", "剖", "部", "位", "部分", "相", "符", "，", "報", "告", "提", "及", "左", "肺", "術", "後", "改", "變", "，可", "考", "慮", "左", "肺", "相關", "檢", "查", " |"
+            ];
+
+            outputArea.innerHTML = "";
+
+            // 模擬串流效果
+            let chunkIndex = 0;
+            const streamInterval = setInterval(() => {
+                if (chunkIndex < mockAnswerChunks.length) {
+                    fullResponseText += mockAnswerChunks[chunkIndex];
+                    outputArea.innerHTML = renderMarkdown(fullResponseText) + '<span class="cursor-blink"></span>';
+                    outputArea.scrollTop = outputArea.scrollHeight;
+                    chunkIndex++;
+                } else {
+                    clearInterval(streamInterval);
+                    // 完成
+                    status.innerText = "COMPLETED";
+                    status.className = "status-tag status-completed";
+                    status.style.background = "";
+                    status.style.color = "";
+                    outputArea.innerHTML = renderMarkdown(fullResponseText);
+                    btnAnalyze.disabled = false;
+                    btnMock.disabled = false;
+                }
+            }, 15); // 每 15ms 輸出一個 chunk，模擬串流速度
         }
 
         // ===== 主程式：SMART on FHIR 授權完成後執行 =====
