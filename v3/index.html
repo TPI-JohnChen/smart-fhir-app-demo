@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Driven ICD-10-PCS Recommender</title>
+    <link rel="icon" type="image/png" href="icon.png">
     <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
     <!-- Markdown 解析庫 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -457,8 +458,13 @@
 <body>
     <div class="container">
         <header>
-            <h1>🏥 AI-Driven ICD-10-PCS Recommender</h1>
-            <div class="user-info" id="userInfo">正在載入使用者資訊...</div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <img src="icon.png" alt="App Icon" style="width: 56px; height: 56px; border-radius: 12px;">
+                <div>
+                    <h1>AI-Driven ICD-10-PCS Recommender</h1>
+                    <div class="user-info" id="userInfo">正在載入使用者資訊...</div>
+                </div>
+            </div>
         </header>
 
         <div class="card" id="patientCard">
