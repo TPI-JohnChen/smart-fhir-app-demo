@@ -15,20 +15,20 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
-            background: #f5f7fa;
-            color: #333;
+            background: #f8fafc;
+            color: #1e293b;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f4c75;
             color: white;
             padding: 20px 30px;
             border-radius: 12px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(15, 76, 117, 0.15);
         }
         header h1 {
             margin: 0 0 10px 0;
@@ -47,9 +47,9 @@
         }
         .card h2 {
             margin: 0 0 20px 0;
-            color: #667eea;
+            color: #0f4c75;
             font-size: 18px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 2px solid #e2e8f0;
             padding-bottom: 10px;
         }
         .patient-header {
@@ -61,7 +61,7 @@
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f4c75;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -88,9 +88,10 @@
             margin-top: 20px;
         }
         .info-item {
-            background: #f8f9fc;
+            background: #f8fafc;
             padding: 15px;
             border-radius: 8px;
+            border: 1px solid #e2e8f0;
         }
         .info-label {
             font-size: 12px;
@@ -106,13 +107,14 @@
         .data-section {
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 12px;
-            background: #f8f9fc;
+            background: #f8fafc;
             padding: 15px;
             border-radius: 8px;
             max-height: 400px;
             overflow: auto;
             white-space: pre-wrap;
             word-break: break-all;
+            border: 1px solid #e2e8f0;
         }
         .loading {
             text-align: center;
@@ -120,8 +122,8 @@
             color: #888;
         }
         .spinner {
-            border: 3px solid #eee;
-            border-top: 3px solid #667eea;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #0f4c75;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -158,7 +160,7 @@
             background: #ddd;
         }
         .tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f4c75;
             color: white;
         }
         .tab-content {
@@ -174,10 +176,10 @@
         }
         .med-item {
             padding: 15px;
-            background: #f8f9fc;
+            background: #f8fafc;
             border-radius: 8px;
             margin-bottom: 10px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #3282b8;
         }
         .med-name {
             font-weight: bold;
@@ -221,7 +223,7 @@
         }
         .ai-assistant-title h2 {
             margin: 0;
-            color: #667eea;
+            color: #0f4c75;
             font-size: 18px;
             border: none;
             padding: 0;
@@ -235,10 +237,10 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            background: #f0f4ff;
+            background: #f0f7ff;
             padding: 10px 16px;
             border-radius: 8px;
-            border: 1px solid #d0d9f0;
+            border: 1px solid #bbd6ed;
         }
         .patient-badge-info {
             text-align: right;
@@ -268,7 +270,7 @@
             gap: 20px;
         }
         .api-config-box {
-            background: #f8f9fc;
+            background: #f8fafc;
             border-radius: 10px;
             padding: 16px;
             border: 1px solid #e2e8f0;
@@ -299,11 +301,11 @@
         }
         .api-config-box input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            border-color: #3282b8;
+            box-shadow: 0 0 0 3px rgba(50, 130, 184, 0.15);
         }
         .report-input-box {
-            background: #f8f9fc;
+            background: #f8fafc;
             border-radius: 10px;
             padding: 16px;
             border: 1px solid #e2e8f0;
@@ -328,13 +330,13 @@
         }
         .report-input-box textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            border-color: #3282b8;
+            box-shadow: 0 0 0 3px rgba(50, 130, 184, 0.15);
         }
         .btn-analyze {
             width: 100%;
             padding: 14px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0f4c75;
             color: white;
             border: none;
             border-radius: 8px;
@@ -346,11 +348,11 @@
             justify-content: center;
             gap: 8px;
             transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(15, 76, 117, 0.25);
         }
         .btn-analyze:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+            background: #1a5a8a;
+            box-shadow: 0 6px 16px rgba(15, 76, 117, 0.35);
         }
         .btn-analyze:disabled {
             opacity: 0.6;
@@ -358,7 +360,7 @@
             transform: none;
         }
         .ai-right-panel {
-            background: #f8f9fc;
+            background: #f8fafc;
             border-radius: 10px;
             padding: 20px;
             border: 1px solid #e2e8f0;
@@ -385,7 +387,7 @@
         .ai-output-title .bar {
             width: 4px;
             height: 20px;
-            background: #667eea;
+            background: #3282b8;
             border-radius: 2px;
         }
         .status-tag {
@@ -448,7 +450,7 @@
         .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; margin-left: 0; color: #64748b; }
         .markdown-body strong { font-weight: 700; }
         .markdown-body em { font-style: italic; }
-        .cursor-blink { display: inline-block; width: 2px; height: 1em; background: #667eea; animation: blink 0.7s infinite; vertical-align: middle; }
+        .cursor-blink { display: inline-block; width: 2px; height: 1em; background: #3282b8; animation: blink 0.7s infinite; vertical-align: middle; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 </head>
@@ -507,7 +509,7 @@
         <div class="ai-assistant-card">
             <div class="ai-assistant-header">
                 <div class="ai-assistant-title">
-                    <svg width="24" height="24" fill="none" stroke="#667eea" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <svg width="24" height="24" fill="none" stroke="#0f4c75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     <div>
                         <h2>臺灣健保署 ICD-10-PCS 影像報告值集AI推薦助手</h2>
                         <p id="smart-status">等待 SMART 授權中...</p>
