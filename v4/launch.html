@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART App 啟動中...</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        .loading {
+            text-align: center;
+            background: white;
+            padding: 48px 64px;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        }
+        .loading h2 {
+            color: #0f4c75;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+        .loading p {
+            color: #64748b;
+            margin: 0;
+        }
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #0f4c75;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <div class="spinner"></div>
+        <h2>正在啟動 SMART App...</h2>
+        <p>請稍候，正在進行授權驗證</p>
+        <div id="error"></div>
+    </div>
+    <script>
+        // SMART on FHIR 授權啟動
+        FHIR.oauth2.authorize({
+            // Client ID - 在 SMART Launcher 測試時可使用任意值
+            // 正式環境需向 EHR 註冊取得
+            // client_id : cc344727-6f90-496c-94fd-c7829aa9a51d
+            // client_secret : 79f04b56b33491716c0880af72cdef7d3f0629111421cedd18353651cd313d9e
+            clientId: "cc344727-6f90-496c-94fd-c7829aa9a51d",
+            clientSecret: "79f04b56b33491716c0880af72cdef7d3f0629111421cedd18353651cd313d9e",
+
+            // 請求的權限範圍:
+            // launch        - 取得啟動上下文
+            // openid        - OpenID Connect 認證
+            // fhirUser      - 取得當前使用者資訊
+            // patient/*.read - 讀取病患資料
+            scope: "launch openid fhirUser patient/*.read",
+
+            // 授權成功後重導向的頁面
+            redirectUri: "index.html"
+        }).catch(function(error) {
+            // 顯示錯誤訊息
+            document.getElementById("error").innerHTML = 
+                '<div class="error">' +
+                '<h3>啟動失敗</h3>' +
+                '<p>' + error.message + '</p>' +
+                '<p>請確認是否從 SMART Launcher 正確啟動此應用程式。</p>' +
+                '</div>';
+            document.querySelector('.spinner').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
